@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Openshift Deployment</title>
+    <script type="text/javascript">
+      let eventCount = 0;
+
+      function getElementById(id) {
+        return document.getElementById(id);
+      }
+
+      function regionDropdownChange() {
+        let selectedRegion = getElementById("regionDropdown").value;
+        console.log("selectedRegion: " + selectedRegion);
+        let deployElement = getElementById("deploy");
+        if (deployElement.disabled === true) {
+          deployElement.disabled = false;
+        }
+      }
+
+      function initializeEventSource() {
+        if (!!window.EventSource || typeof EventSource !== "undefined") {
+          let eventSource = new EventSource(window.location.href + "executeCommand?command=test1.sh&args=--region=west");
+
+          eventSource.onopen = function() {
+            console.log("Eventsource connection to server opened.");
+          };
+
+          eventSource.onmessage = function(event) {
+            console.debug("received event, " + JSON.stringify(event));
+            addToServerEvents(event.data);
+          };
+
+          eventSource.onerror = function(event) {
+            let readyState = event.readyState;
+
+            switch (readyState) {
+              case EventSource.CLOSED:
+                console.log("Connection to the event stream is closed...");
+                break;
+              case EventSource.OPEN:
+                console.log("Connection to the event stream is opened...");
+                break;
+              case EventSource.CONNECTING:
+                console.log("Connecting to event stream...");
+                break;
+              default:
+                console.log(
+                  "Error in connecting to the event stream... Err code: " +
+                    readyState
+                );
+            }
+          };
+        } else {
+          alert("Sorry event streaming is not supported ");
+        }
+      }
+
+      function deploy() {
+        let confirmAction = confirm(
+          "Are you sure you want to initiate deployment in region ?"
+        );
+        if (confirmAction) {
+          initializeEventSource();
+        } else {
+          console.debug("deploy action dismissed");
+        }
+      }
+
+      function addToServerEvents(eventMessage) {
+        ++eventCount;
+        let serverEvents = getElementById("serverEvents");
+        let eventId = "event-" + eventCount;
+        let span = document.createElement("span");
+        let serverEventsContainer = getElementById("serverEventsContainer");
+        span.id = eventId;
+        span.innerHTML = eventMessage;
+        serverEvents.appendChild(span);
+        serverEventsContainer.scrollTop = serverEventsContainer.scrollHeight;
+      }
+    </script>
+    <style type="text/css">
+      #serverEventsContainer {
+        background-color: #000000;
+        width: auto;
+        height: 480px;
+        overflow-y: auto;
+      }
+
+      #serverEvents {
+        color: #FFFFFF;
+        max-height: 480px;
+        padding-left: 10px;
+        padding-top: 10px;
+      }
+
+      .scroller {
+        scrollbar-color: #7f7f7f white;
+        scrollbar-width: thin;
+      }
+
+      .scroller::-webkit-scrollbar {
+        width: 7.5px;
+      }
+
+      .scroller::-webkit-scrollbar-track {
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid #ccc;
+      }
+
+      .scroller::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background: linear-gradient(left, #fff, #e4e4e4);
+        border: 1px solid #aaa;
+      }
+
+      .scroller::-webkit-scrollbar-thumb:hover {
+        background: #fff;
+      }
+
+      .scroller::-webkit-scrollbar-thumb {
+        background: linear-gradient(left, #22ADD4, #1E98BA);
+      }
+    </style>
+  </head>
+  <body>
+    <label>Region:&nbsp;&nbsp;</label>
+    <select id="regionDropdown" required onchange="regionDropdownChange()">
+      <option value="" disabled selected hidden>Choose a region</option>
+      <option value="west">West</option>
+      <option value="east">East</option>
+    </select>
+    <br /><br />
+    <input
+      id="deploy"
+      type="button"
+      value="deploy"
+      onclick="deploy()"
+      disabled
+    />
+    <br /><br /><br />
+    <div id="serverEventsContainer" class="scroller">
+      <div id="serverEvents"></div>
+    </div>
+  </body>
+</html>
